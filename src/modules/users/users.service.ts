@@ -40,13 +40,14 @@ export class UsersService {
     const savedUser = await this.usersRepository.save(user);
 
     const { password, ...userWithoutPassword } = savedUser;
-    const users = await this.usersRepository.findAll();
 
-    return users.map(({ password, ...user }) => user);
+    return userWithoutPassword;
   }
 
   async findAll() {
-    return this.usersRepository.findAll();
+    const users = await this.usersRepository.findAll();
+
+    return users.map(({ password, ...user }) => user);
   }
 
   async findOne(id: string) {
