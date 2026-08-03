@@ -1,3 +1,4 @@
+import { Role } from 'src/common/enums/role.enum';
 import {
   Entity,
   Column,
@@ -66,7 +67,9 @@ export class User {
   isActive!: boolean;
 
   @Column({
-    default: 'USER',
+    type: 'enum',
+    enum: Role,
+    default: Role.USER,
   })
-  role!: string;
+  role!: Role;
 }

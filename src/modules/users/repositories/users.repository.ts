@@ -51,4 +51,14 @@ export class UsersRepository {
   remove(user: User) {
     return this.repository.remove(user);
   }
+
+  deleteById(id: string) {
+    return this.repository.delete(id);
+  }
+
+  existsById(id: string) {
+    return this.repository.exists({
+      where: { id },
+    });
+  }
 }

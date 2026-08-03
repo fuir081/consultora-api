@@ -4,6 +4,8 @@ import * as bcrypt from 'bcrypt';
 
 import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
+import { ApiResponse } from 'src/common/responses/api-response';
+import { DocumentToEntityTransformer } from 'typeorm/query-builder/transformer/DocumentToEntityTransformer.js';
 
 @Injectable()
 export class AuthService {
@@ -21,14 +23,14 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    if (!user.isActive) {
+      throw new UnauthorizedException('La cuenta se encuentra deshabilitada.');
+    }
+
     const validPassword = await bcrypt.compare(
       loginDto.password,
       user.password,
     );
-
-    if (!validPassword) {
-      throw new UnauthorizedException('Credenciales inválidas');
-    }
 
     const payload = {
       sub: user.id,
@@ -37,16 +39,17 @@ export class AuthService {
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
-    return {
+    return new ApiResponse(true, 'Inicio de sesión exitoso.', {
       accessToken,
       tokenType: 'Bearer',
       expiresIn: '15m',
       user: {
         id: user.id,
+        representativeName: user.representativeName,
         email: user.email,
         companyName: user.companyName,
         role: user.role,
       },
-    };
+    });
   }
 }
