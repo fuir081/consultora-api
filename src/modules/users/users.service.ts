@@ -18,8 +18,9 @@ import { ApiResponse } from 'src/common/responses/api-response';
 export class UsersService {
   constructor(private readonly usersRepository: UsersRepository) {}
 
-  //Método para crear un usuario y devolverlo sin la contraseña
-  async create(createUserDto: CreateUserDto) {
+  // Método para crear un usuario y devolverlo sin la contraseña
+  // Agrega currentUser: any como segundo parámetro
+  async create(createUserDto: CreateUserDto, currentUser: any) {
     const emailExists = await this.usersRepository.findByEmail(
       createUserDto.email,
     );
@@ -28,25 +29,37 @@ export class UsersService {
       throw new BadRequestException('El correo ya está registrado.');
     }
 
-    const companyExists = await this.usersRepository.findByCompanyRut(
-      createUserDto.companyRut,
-    );
+    let { companyId, password, ...userData } = createUserDto;
 
-    if (companyExists) {
-      throw new BadRequestException('El RUT de la empresa ya existe.');
+    // REGLA DE NEGOCIO: Si el que crea es un ADMIN, le asignamos su misma empresa automáticamente
+    if (currentUser.role === Role.ADMIN) {
+      // Usamos el id del JWT (dependiendo de tu auth puede ser .id o .sub)
+      const adminId = currentUser.id || currentUser.sub;
+      const adminUser = await this.usersRepository.findByIdWithCompany(adminId);
+
+      if (adminUser && adminUser.company) {
+        companyId = adminUser.company.id; // Clonamos el ID de la empresa
+      } else {
+        throw new BadRequestException(
+          'El administrador no tiene una empresa válida asignada.',
+        );
+      }
     }
 
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = this.usersRepository.create({
-      ...createUserDto,
+      ...userData,
       password: hashedPassword,
-      role: Role.USER,
+      role: createUserDto.role || Role.USER,
     });
 
-    const savedUser = await this.usersRepository.save(user);
+    if (companyId) {
+      user.company = { id: companyId } as any;
+    }
 
-    const { password, ...userWithoutPassword } = savedUser;
+    const savedUser = await this.usersRepository.save(user);
+    const { password: _, ...userWithoutPassword } = savedUser;
 
     return new ApiResponse(
       true,
@@ -54,16 +67,33 @@ export class UsersService {
       userWithoutPassword,
     );
   }
-  //Método para encontrar todos los usuarios y devolverlos sin la contraseña
-  async findAll() {
-    const users = await this.usersRepository.findAll();
+
+  // Método para encontrar todos los usuarios y devolverlos sin la contraseña
+  // Método para encontrar todos los usuarios filtrados por permisos
+  // Método para encontrar todos los usuarios filtrados por permisos
+  async findAll(currentUser: any) {
+    let users = await this.usersRepository.findAll();
+
+    // REGLA: Si el usuario es ADMIN, filtramos por su empresa real consultada a la BD
+    if (currentUser.role === Role.ADMIN) {
+      const adminId = currentUser.id || currentUser.sub;
+
+      // Buscamos al admin actual en la BD para obtener su empresa real
+      const adminUser = await this.usersRepository.findByIdWithCompany(adminId);
+      const adminCompanyId = adminUser?.company?.id;
+
+      users = users.filter(
+        (user) =>
+          user.company?.id === adminCompanyId && user.role !== Role.SYSADMIN,
+      );
+    }
 
     const result = users.map(({ password, ...user }) => user);
 
     return new ApiResponse(true, undefined, result);
   }
 
-  //Método para encontrar un usuario por su id y devolverlo sin la contraseña
+  // Método para encontrar un usuario por su id y devolverlo sin la contraseña
   async findOne(id: string) {
     const user = await this.usersRepository.findById(id);
 
@@ -75,7 +105,8 @@ export class UsersService {
 
     return new ApiResponse(true, undefined, userWithoutPassword);
   }
-  //Método para encontrar un usuario por su id
+
+  // Método para encontrar un usuario por su id
   async findEntityById(id: string): Promise<User> {
     const user = await this.usersRepository.findById(id);
 
@@ -85,7 +116,8 @@ export class UsersService {
 
     return user;
   }
-  //Método para eliminar un usuario
+
+  // Método para eliminar un usuario
   async remove(id: string) {
     const user = await this.usersRepository.findById(id);
 
@@ -95,11 +127,12 @@ export class UsersService {
 
     return this.usersRepository.remove(user);
   }
+
   async findByEmail(email: string) {
     return this.usersRepository.findByEmailWithPassword(email);
   }
 
-  //Método para crear un usuario administrador
+  // Método para crear un usuario administrador
   async createAdmin(createAdminDto: CreateAdminDto) {
     const emailExists = await this.usersRepository.findByEmail(
       createAdminDto.email,
@@ -107,30 +140,30 @@ export class UsersService {
     if (emailExists) {
       throw new BadRequestException('El correo ya está registrado.');
     }
-    const companyExists = await this.usersRepository.findByCompanyRut(
-      createAdminDto.companyRut,
-    );
 
-    if (companyExists) {
-      throw new BadRequestException('El RUT de la empresa ya existe.');
-    }
+    // Misma lógica: extraemos companyId
+    const { companyId, password, ...adminData } = createAdminDto;
 
-    const hashedPassword = await bcrypt.hash(createAdminDto.password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const admin = this.usersRepository.create({
-      ...createAdminDto,
+      ...adminData,
       password: hashedPassword,
       role: Role.ADMIN,
     });
 
+    if (companyId) {
+      admin.company = { id: companyId } as any;
+    }
+
     const savedAdmin = await this.usersRepository.save(admin);
 
-    const { password, ...adminWithoutPassword } = savedAdmin;
+    const { password: _, ...adminWithoutPassword } = savedAdmin;
 
     return adminWithoutPassword;
   }
 
-  //Método para actualizar el rol de un usuario
+  // Método para actualizar el rol de un usuario
   async updateRole(id: string, dto: UpdateRoleDto) {
     const user = await this.usersRepository.findById(id);
 
@@ -147,7 +180,7 @@ export class UsersService {
     return result;
   }
 
-  //Método para actualizar el estado de un usuario
+  // Método para actualizar el estado de un usuario
   async updateStatus(id: string, dto: UpdateStatusDto) {
     const user = await this.usersRepository.findById(id);
 

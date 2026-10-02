@@ -7,6 +7,7 @@ import {
   Post,
   UseGuards,
   Patch,
+  Req,
 } from '@nestjs/common';
 
 import { CreateUserDto } from './dto/create-user.dto';
@@ -24,21 +25,25 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.SYSADMIN, Role.ADMIN)
   @Get()
-  findAll() {
-    console.log('Todos los usuarios');
-    return this.usersService.findAll();
-  }
-
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    console.log('Se ha creado un nuevo usuario');
-    return this.usersService.create(createUserDto);
+  findAll(@Req() req: any) {
+    console.log('Todos los usuarios solicitados por:', req.user.email);
+    // Pasamos el usuario logueado al servicio
+    return this.usersService.findAll(req.user);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.SYSADMIN, Role.ADMIN) // <- Permitimos crear a ambos
+  @Post()
+  create(@Body() createUserDto: CreateUserDto, @Req() req: any) {
+    console.log('Se ha creado un nuevo usuario por:', req.user.email);
+    // Pasamos req.user (el creador) como segundo parámetro
+    return this.usersService.create(createUserDto, req.user);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SYSADMIN, Role.ADMIN)
   @Post('admin')
   createAdmin(@Body() createAdminDto: CreateAdminDto) {
     return this.usersService.createAdmin(createAdminDto);
@@ -65,14 +70,14 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.SYSADMIN, Role.ADMIN)
   @Patch(':id/status')
   updateStatus(@Param('id') id: string, @Body() dto: UpdateStatusDto) {
     return this.usersService.updateStatus(id, dto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @Roles(Role.SYSADMIN, Role.ADMIN)
   @Delete(':id/permanent')
   removePermanent(@Param('id') id: string) {
     return this.usersService.removePermanent(id);

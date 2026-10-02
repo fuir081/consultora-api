@@ -1,7 +1,9 @@
 export class AuthUserDto {
   id!: string;
   email!: string;
-  companyName!: string;
+  name!: string; // Cambiado de representativeName
+  companyId?: string | null; // Nuevo
+  companyName?: string | null;
   role!: string;
 }
 

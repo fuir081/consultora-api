@@ -1,4 +1,5 @@
 import { Role } from 'src/common/enums/role.enum';
+import { Company } from '../../companies/entities/company.entity'; // Asegúrate de ajustar esta ruta
 import {
   Entity,
   Column,
@@ -6,6 +7,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 
 @Entity('users')
@@ -13,47 +16,22 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Index()
-  @Column({
-    unique: true,
-    length: 12,
-  })
-  companyRut!: string;
-
-  @Column({
-    length: 200,
-  })
-  companyName!: string;
-
-  @Column({
-    length: 150,
-  })
-  representativeName!: string;
+  @Column({ length: 150 })
+  name!: string;
 
   @Index()
-  @Column({
-    length: 12,
-  })
-  representativeRut!: string;
+  @Column({ length: 12 })
+  rut!: string;
 
-  @Column({
-    length: 20,
-  })
+  @Column({ length: 20 })
   phone!: string;
 
   @Index()
-  @Column({
-    unique: true,
-  })
+  @Column({ unique: true })
   email!: string;
 
   @Column()
   password!: string;
-
-  @Column({
-    nullable: true,
-  })
-  megaNodeId!: string;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -61,15 +39,14 @@ export class User {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  @Column({
-    default: true,
-  })
+  @Column({ default: true })
   isActive!: boolean;
 
-  @Column({
-    type: 'enum',
-    enum: Role,
-    default: Role.USER,
-  })
+  @Column({ type: 'enum', enum: Role, default: Role.USER })
   role!: Role;
+
+  // Nueva relación con Company
+  @ManyToOne(() => Company, (company) => company.users, { nullable: true })
+  @JoinColumn({ name: 'companyId' })
+  company!: Company;
 }

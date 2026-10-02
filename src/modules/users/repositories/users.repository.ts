@@ -19,13 +19,22 @@ export class UsersRepository {
     return this.repository.save(user);
   }
 
-  findAll() {
-    return this.repository.find();
+  findAll(): Promise<User[]> {
+    return this.repository.find({
+      relations: { company: true }, // <-- Esto es vital para que viaje el nombre de la empresa
+    });
   }
 
   findById(id: string) {
     return this.repository.findOne({
       where: { id },
+    });
+  }
+
+  findByIdWithCompany(id: string) {
+    return this.repository.findOne({
+      where: { id },
+      relations: { company: true },
     });
   }
 
@@ -37,12 +46,22 @@ export class UsersRepository {
 
   findByCompanyRut(companyRut: string) {
     return this.repository.findOne({
-      where: { companyRut },
+      where: {
+        company: { rut: companyRut },
+      },
     });
   }
   findByEmailWithPassword(email: string) {
     return this.repository
       .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email })
+      .getOne();
+  }
+  findByEmailWithPasswordAndCompany(email: string) {
+    return this.repository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.company', 'company') // <-- El JOIN que necesitas
       .addSelect('user.password')
       .where('user.email = :email', { email })
       .getOne();

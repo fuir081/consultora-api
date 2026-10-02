@@ -1,21 +1,14 @@
 export class UserResponseDto {
   id!: string;
-
-  companyRut!: string;
-
-  companyName!: string;
-
-  representativeName!: string;
-
-  representativeRut!: string;
-
+  name!: string;
+  rut!: string;
   phone!: string;
-
   email!: string;
-
-  megaNodeId?: string;
-
+  role!: string;
+  isActive!: boolean;
+  companyId?: string | null;
+  companyName?: string | null;
+  megaNodeId?: string | null;
   createdAt!: Date;
-
   updatedAt!: Date;
 }

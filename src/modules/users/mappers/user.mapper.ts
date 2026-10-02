@@ -6,19 +6,15 @@ uno sin afectar al otro.
 import { User } from '../entities/user.entity';
 import { UserResponseDto } from '../dto/user-response.dto';
 
-export class UserMapper {
-  static toResponse(user: User): UserResponseDto {
-    return {
-      id: user.id,
-      companyRut: user.companyRut,
-      companyName: user.companyName,
-      representativeName: user.representativeName,
-      representativeRut: user.representativeRut,
-      phone: user.phone,
-      email: user.email,
-      megaNodeId: user.megaNodeId,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-    };
-  }
-}
+// En la función que retorna el DTO, ajusta el mapeo:
+export const mapUserToDto = (user: User) => {
+  const { password, ...userWithoutPassword } = user;
+
+  return {
+    ...userWithoutPassword,
+    // Leer desde la relación company en lugar del objeto user directamente
+    companyRut: user.company?.rut || null,
+    companyName: user.company?.razonSocial || null,
+    megaNodeId: user.company?.megaNodeId || null,
+  };
+};
